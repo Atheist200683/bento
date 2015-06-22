@@ -25,7 +25,7 @@
           "modifyvm",
           "{{.Name}}",
           "--memory",
-          "2048"
+          "4096"
         ],
         [
           "modifyvm",
@@ -59,7 +59,7 @@
       "vm_name": "packer-oracle-5.8-i386",
       "vmx_data": {
         "cpuid.coresPerSocket": "1",
-        "memsize": "2048",
+        "memsize": "4096",
         "numvcpus": "2"
       }
     },
@@ -81,7 +81,7 @@
           "set",
           "{{.Name}}",
           "--memsize",
-          "2048"
+          "4096"
         ],
         [
           "set",
