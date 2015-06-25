@@ -1,4 +1,8 @@
-#!/bin/sh -eux
+#!/bin/bash
+
+#Clean up after Oracle DB install
+rm -rf /home/oracle/oracle-db
+rm -rf /apps/oraInventory
 
 #Clean up Yum cache
 yum -y clean all
