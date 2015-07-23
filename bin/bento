@@ -69,6 +69,18 @@ class Options
           opts.on("-o BUILDS", "--only BUILDS", "Only build some Packer builds") do |opt|
             options.builds = opt
           end
+
+          opts.on("-e BUILDS", "--except BUILDS", "Build all Packer builds except these") do |opt|
+            options.except = opt
+          end
+
+          opts.on("-m MIRROR", "--mirror MIRROR", "Look for isos at MIRROR") do |opt|
+            options.mirror = opt
+          end
+
+          opts.on("-v VERSION", "--version VERSION", "Override the version set in the template") do |opt|
+            options.override_version = opt
+          end
         },
         argv: templates_argv_proc
       },
@@ -76,6 +88,11 @@ class Options
         class: NormalizeRunner,
         parser: OptionParser.new { |opts|
           opts.banner = "Usage: #{NAME} normalize TEMPLATE[ TEMPLATE ...]"
+
+          opts.on("-d", "--[no-]debug", "Run packer with debug output") do |opt|
+            options.debug = opt
+          end
+
         },
         argv: templates_argv_proc
       },
@@ -131,203 +148,124 @@ module Common
   end
 end
 
-class BuildRunner
+module PackerExec
 
-  include Common
-
-  attr_reader :templates, :dry_run, :debug, :builds, :build_timestamp
-
-  def initialize(opts)
-    @templates = opts.templates
-    @dry_run = opts.dry_run
-    @debug = opts.debug
-    @builds = opts.builds
-    @build_timestamp = Time.now.gmtime.strftime("%Y%m%d%H%M%S")
-  end
-
-  def start
-    banner("Starting build for templates: #{templates}")
-    time = Benchmark.measure do
-      templates.each { |template| build_template(template) }
-    end
-    banner("Build finished in #{duration(time.real)}.")
-  end
-
-  def build_template(template)
+  def for_packer_run_with(template)
     Tempfile.open("#{template}-metadata.json") do |md_file|
       Tempfile.open("#{template}-metadata-var-file") do |var_file|
         write_box_metadata(template, md_file)
-        write_var_file(template, md_file.path, var_file)
-        packer(template, var_file.path)
-        write_final_metadata(template)
+        write_var_file(template, md_file, var_file)
+        yield md_file, var_file
       end
     end
   end
 
-  def packer(template, var_file)
-    cmd = packer_cmd(template, var_file)
-    banner("[#{template}] Running: '#{cmd.join(' ')}'")
-    time = Benchmark.measure do
-      system(*cmd) or raise "[#{template}] Error building, exited #{$?}"
-    end
-    banner("[#{template}] Finished in #{duration(time.real)}.")
-  end
-
-  def packer_cmd(template, var_file)
-    vars = "#{template}.variables.json"
-    cmd = %W[packer build -var-file=#{var_file} #{template}.json]
-    cmd.insert(2, "-var-file=#{vars}") if File.exist?(vars)
-    cmd.insert(2, "-only=#{builds}") if builds
-    cmd.insert(2, "-debug") if debug
-    cmd.insert(0, "echo") if dry_run
-    cmd
-  end
-
   def write_box_metadata(template, io)
-    md = BuildMetadata.new(template, build_timestamp).read
+    md = BuildMetadata.new(template, build_timestamp, override_version).read
 
     io.write(JSON.pretty_generate(md))
     io.close
   end
 
-  def write_final_metadata(template)
-    md = BuildMetadata.new(template, build_timestamp).read
-    path = File.join(File.dirname(__FILE__), "..", "builds")
-    filename = File.join(path, "#{md[:box_basename]}.metadata.json")
-    checksums = ChecksumMetadata.new(path, md[:box_basename]).read
-
-    md[:md5] = checksums[:md5]
-    md[:sha256] = checksums[:sha256]
-
-    File.open(filename, "wb") { |file| file.write(JSON.pretty_generate(md)) }
-  end
-
   def write_var_file(template, md_file, io)
-    md = BuildMetadata.new(template, build_timestamp).read
+    md = BuildMetadata.new(template, build_timestamp, override_version).read
 
     io.write(JSON.pretty_generate({
       box_basename:     md[:box_basename],
       build_timestamp:  md[:build_timestamp],
       git_revision:     md[:git_revision],
-      metadata:         md_file,
+      metadata:         md_file.path,
       version:          md[:version]
     }))
     io.close
   end
 end
 
-class ChecksumMetadata
+class BuildRunner
 
-  def initialize(path, box_basename)
-    @base = File.join(path, box_basename)
+  include Common
+  include PackerExec
+
+  attr_reader :templates, :dry_run, :debug, :builds, :except, :mirror, :override_version, :build_timestamp
+
+  def initialize(opts)
+    @templates = opts.templates
+    @dry_run = opts.dry_run
+    @debug = opts.debug
+    @builds = opts.builds
+    @except = opts.except
+    @mirror = opts.mirror
+    @override_version = opts.override_version
+    @build_timestamp = Time.now.gmtime.strftime("%Y%m%d%H%M%S")
   end
 
-  def read
-    {
-      md5:    md5_checksums,
-      sha256: sha256_checksums
-    }
-  end
-
-  private
-
-  attr_reader :base
-
-  def md5_checksums
-    Hash[Dir.glob("#{base}.*.box").map { |box|
-      [File.basename(box), Digest::MD5.file(box).hexdigest]
-    }]
-  end
-
-  def sha256_checksums
-    Hash[Dir.glob("#{base}.*.box").map { |box|
-      [File.basename(box), Digest::SHA256.file(box).hexdigest]
-    }]
-  end
-end
-
-class BuildMetadata
-
-  def initialize(template, build_timestamp)
-    @template = template
-    @build_timestamp = build_timestamp
-  end
-
-  def read
-    {
-      name:             name,
-      version:          version,
-      build_timestamp:  build_timestamp,
-      git_revision:     git_revision,
-      box_basename:     box_basename,
-      atlas_org:        atlas_org,
-      arch:             template_vars.fetch("arch", UNKNOWN),
-      template:         template_vars.fetch("template", UNKNOWN),
-    }
+  def start
+    banner("Starting build for templates: #{templates}")
+    time = Benchmark.measure do
+      templates.each { |template| build(template) }
+    end
+    banner("Build finished in #{duration(time.real)}.")
   end
 
   private
 
-  UNKNOWN = "__unknown__".freeze
-  DEFAULT_ATLAS_ORG = "chef".freeze
-
-  attr_reader :template, :build_timestamp
-
-  def atlas_org
-    merged_vars.fetch("atlas_org", DEFAULT_ATLAS_ORG)
-  end
-
-  def box_basename
-    "#{atlas_org}__#{name}-#{version}.git.#{git_revision}"
-  end
-
-  def git_revision
-    sha = %x{git rev-parse HEAD}.strip
-
-    git_clean? ? sha : "#{sha}_dirty"
-  end
-
-  def git_clean?
-    %{git status --porcelain}.strip.empty?
-  end
-
-  def merged_vars
-    @merged_vars ||= begin
-      if File.exist?("#{template}.variables.json")
-        template_vars.merge(JSON.load(IO.read("#{template}.variables.json")))
-      else
-        template_vars
+  def build(template)
+    for_packer_run_with(template) do |md_file, var_file|
+      cmd = packer_build_cmd(template, var_file.path)
+      banner("[#{template}] Building: '#{cmd.join(' ')}'")
+      time = Benchmark.measure do
+        system(*cmd) or raise "[#{template}] Error building, exited #{$?}"
+        write_final_metadata(template)
       end
+      banner("[#{template}] Finished building in #{duration(time.real)}.")
     end
   end
 
-  def name
-    merged_vars.fetch("name", template)
+  def packer_build_cmd(template, var_file)
+    vars = "#{template}.variables.json"
+    headless = !(RUBY_PLATFORM =~ /darwin/)
+    cmd = %W[packer build -var-file=#{var_file} #{template}.json]
+    cmd.insert(2, "-var-file=#{vars}") if File.exist?(vars)
+    cmd.insert(2, "-only=#{builds}") if builds
+    cmd.insert(2, "-except=#{except}") if except
+    # Build the command line in the correct order and without spaces as future input for the splat operator.
+    cmd.insert(2, "mirror=#{mirror}") if mirror
+    cmd.insert(2, "-var") if mirror
+    cmd.insert(2, "headless=true") if headless
+    cmd.insert(2, "-var") if headless
+    cmd.insert(2, "-debug") if debug
+    cmd.insert(0, "echo") if dry_run
+    cmd
   end
 
-  def template_vars
-    @template_vars ||= JSON.load(IO.read("#{template}.json")).fetch("variables")
-  end
+  def write_final_metadata(template)
+    md = BuildMetadata.new(template, build_timestamp, override_version).read
+    path = File.join(File.dirname(__FILE__), "..", "builds")
+    filename = File.join(path, "#{md[:box_basename]}.metadata.json")
 
-  def user_prefix
-    merged_vars.fetch("user_prefix", DEFAULT_USER_PREFIX)
-  end
+    md[:providers] = ProviderMetadata.new(path, md[:box_basename]).read
 
-  def version
-    merged_vars.fetch("version", "#{UNKNOWN}.TIMESTAMP").
-      rpartition(".").first.concat(".#{build_timestamp}")
+    if dry_run
+      banner("(Dry run) Metadata file contents would be something similar to:")
+      puts JSON.pretty_generate(md)
+    else
+      File.open(filename, "wb") { |file| file.write(JSON.pretty_generate(md)) }
+    end
   end
 end
 
 class NormalizeRunner
 
   include Common
+  include PackerExec
 
-  attr_reader :templates
+  attr_reader :templates, :build_timestamp, :debug, :override_version
 
   def initialize(opts)
     @templates = opts.templates
+    @debug = opts.debug
     @modified = []
+    @build_timestamp = Time.now.gmtime.strftime("%Y%m%d%H%M%S")
   end
 
   def start
@@ -344,6 +282,12 @@ class NormalizeRunner
       @modified.sort.each { |template| info("  * #{template}")}
     end
     banner("Normalizing finished in #{duration(time.real)}.")
+  end
+
+  private
+
+  def checksum(file)
+    Digest::MD5.file(file).hexdigest
   end
 
   def fix(template)
@@ -367,14 +311,25 @@ class NormalizeRunner
     end
   end
 
-  def validate(template)
-    cmd = %W[packer validate #{template}.json]
-    banner("[#{template}] Validating")
-    system(*cmd) or raise "[#{template}] Error validating, exited #{$?}"
+  def packer_validate_cmd(template, var_file)
+    vars = "#{template}.variables.json"
+    cmd = %W[packer validate -var-file=#{var_file} #{template}.json]
+    cmd.insert(2, "-var-file=#{vars}") if File.exist?(vars)
+    cmd
   end
 
-  def checksum(file)
-    Digest::MD5.file(file).hexdigest
+  def validate(template)
+    for_packer_run_with(template) do |md_file, var_file|
+      cmd = packer_validate_cmd(template, var_file.path)
+      banner("[#{template}] Validating: '#{cmd.join(' ')}'")
+      if debug
+        banner("[#{template}] DEBUG: var_file(#{var_file.path}) is:")
+        puts IO.read(var_file.path)
+        banner("[#{template}] DEBUG: md_file(#{md_file.path}) is:")
+        puts IO.read(md_file.path)
+      end
+      system(*cmd) or raise "[#{template}] Error validating, exited #{$?}"
+    end
   end
 end
 
@@ -403,6 +358,106 @@ class Runner
 
   def start
     options.klass.new(options).start
+  end
+end
+
+class BuildMetadata
+
+  def initialize(template, build_timestamp, override_version)
+    @template = template
+    @build_timestamp = build_timestamp
+    @override_version = override_version
+  end
+
+  def read
+    {
+      name:             name,
+      version:          version,
+      build_timestamp:  build_timestamp,
+      git_revision:     git_revision,
+      box_basename:     box_basename,
+      template:         template_vars.fetch("template", UNKNOWN),
+    }
+  end
+
+  private
+
+  UNKNOWN = "__unknown__".freeze
+
+  attr_reader :template, :build_timestamp, :override_version
+
+  def box_basename
+    "#{name.gsub("/", "__")}-#{version}.git.#{git_revision}"
+  end
+
+  def git_revision
+    sha = %x{git rev-parse HEAD}.strip
+
+    git_clean? ? sha : "#{sha}_dirty"
+  end
+
+  def git_clean?
+    %x{git status --porcelain}.strip.empty?
+  end
+
+  def merged_vars
+    @merged_vars ||= begin
+      if File.exist?("#{template}.variables.json")
+        template_vars.merge(JSON.load(IO.read("#{template}.variables.json")))
+      else
+        template_vars
+      end
+    end
+  end
+
+  def name
+    merged_vars.fetch("name", template)
+  end
+
+  def template_vars
+    @template_vars ||= JSON.load(IO.read("#{template}.json")).fetch("variables")
+  end
+
+  def version
+    if override_version
+       override_version
+    else
+    merged_vars.fetch("version", "#{UNKNOWN}.TIMESTAMP").
+      rpartition(".").first.concat(".#{build_timestamp}")
+    end
+  end
+end
+
+class ProviderMetadata
+
+  def initialize(path, box_basename)
+    @base = File.join(path, box_basename)
+  end
+
+  def read
+    Dir.glob("#{base}.*.box").map do |file|
+      {
+        name: provider_from_file(file),
+        file: "#{File.basename(file)}",
+        checksum_type: "sha256",
+        checksum: shasum(file)
+      }
+    end
+  end
+
+  private
+
+  attr_reader :base
+
+  def provider_from_file(file)
+    case provider = file.sub(/^.*\.([^.]+)\.box$/, '\1')
+    when /vmware/i then "vmware_desktop"
+    else provider
+    end
+  end
+
+  def shasum(file)
+    Digest::SHA256.file(file).hexdigest
   end
 end
 

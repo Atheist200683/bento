@@ -9,6 +9,7 @@
       "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
       "guest_os_type": "Fedora",
       "hard_drive_interface": "sata",
+      "headless": "{{ user `headless` }}",
       "http_directory": "http",
       "iso_checksum": "85e50a8a938996522bf1605b3578a2d6680362c1aa963d0560d59c2e4fc795ef",
       "iso_checksum_type": "sha256",
@@ -35,7 +36,7 @@
         ]
       ],
       "virtualbox_version_file": ".vbox_version",
-      "vm_name": "packer-fedora-21-i386"
+      "vm_name": "{{ user `template` }}"
     },
     {
       "boot_command": [
@@ -44,6 +45,7 @@
       "boot_wait": "10s",
       "disk_size": 40960,
       "guest_os_type": "fedora",
+      "headless": "{{ user `headless` }}",
       "http_directory": "http",
       "iso_checksum": "85e50a8a938996522bf1605b3578a2d6680362c1aa963d0560d59c2e4fc795ef",
       "iso_checksum_type": "sha256",
@@ -56,7 +58,7 @@
       "ssh_wait_timeout": "10000s",
       "tools_upload_flavor": "linux",
       "type": "vmware-iso",
-      "vm_name": "packer-fedora-21-i386",
+      "vm_name": "{{ user `template` }}",
       "vmx_data": {
         "cpuid.coresPerSocket": "1",
         "memsize": "512",
@@ -70,6 +72,7 @@
       "boot_wait": "10s",
       "disk_size": 40960,
       "guest_os_type": "fedora-core",
+      "headless": "{{ user `headless` }}",
       "http_directory": "http",
       "iso_checksum": "85e50a8a938996522bf1605b3578a2d6680362c1aa963d0560d59c2e4fc795ef",
       "iso_checksum_type": "sha256",
@@ -97,7 +100,7 @@
       "ssh_username": "vagrant",
       "ssh_wait_timeout": "10000s",
       "type": "parallels-iso",
-      "vm_name": "packer-fedora-21-i386"
+      "vm_name": "{{ user `template` }}"
     }
   ],
   "post-processors": [
@@ -132,6 +135,7 @@
     "box_basename": "fedora-21-i386",
     "build_timestamp": "{{isotime \"20060102150405\"}}",
     "git_revision": "__unknown_git_revision__",
+    "headless": "",
     "metadata": "floppy/dummy_metadata.json",
     "mirror": "http://download.fedoraproject.org/pub/fedora/linux",
     "name": "fedora-21-i386",

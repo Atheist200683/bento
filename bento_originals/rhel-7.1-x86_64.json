@@ -9,6 +9,7 @@
       "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
       "guest_os_type": "RedHat_64",
       "hard_drive_interface": "sata",
+      "headless": "{{ user `headless` }}",
       "http_directory": "http",
       "iso_checksum": "3685468ec6cdcb70dfc85ebbc164da427dc2d762644c3c2ee1520f4f661c15ce",
       "iso_checksum_type": "sha256",
@@ -35,7 +36,7 @@
         ]
       ],
       "virtualbox_version_file": ".vbox_version",
-      "vm_name": "packer-rhel-7.1-x86_64"
+      "vm_name": "{{ user `template` }}"
     },
     {
       "boot_command": [
@@ -44,6 +45,7 @@
       "boot_wait": "10s",
       "disk_size": 40960,
       "guest_os_type": "rhel7-64",
+      "headless": "{{ user `headless` }}",
       "http_directory": "http",
       "iso_checksum": "3685468ec6cdcb70dfc85ebbc164da427dc2d762644c3c2ee1520f4f661c15ce",
       "iso_checksum_type": "sha256",
@@ -56,7 +58,7 @@
       "ssh_wait_timeout": "10000s",
       "tools_upload_flavor": "linux",
       "type": "vmware-iso",
-      "vm_name": "packer-rhel-7.1-x86_64",
+      "vm_name": "{{ user `template` }}",
       "vmx_data": {
         "cpuid.coresPerSocket": "1",
         "memsize": "480",
@@ -70,6 +72,7 @@
       "boot_wait": "10s",
       "disk_size": 40960,
       "guest_os_type": "rhel",
+      "headless": "{{ user `headless` }}",
       "http_directory": "http",
       "iso_checksum": "3685468ec6cdcb70dfc85ebbc164da427dc2d762644c3c2ee1520f4f661c15ce",
       "iso_checksum_type": "sha256",
@@ -97,7 +100,7 @@
       "ssh_username": "vagrant",
       "ssh_wait_timeout": "10000s",
       "type": "parallels-iso",
-      "vm_name": "packer-rhel-7.1-x86_64"
+      "vm_name": "{{ user `template` }}"
     }
   ],
   "post-processors": [
@@ -117,7 +120,7 @@
       "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'",
       "scripts": [
         "scripts/common/metadata.sh",
-        "scripts/centos/fix-slow-dns.sh",
+        "scripts/centos/networking.sh",
         "scripts/common/sshd.sh",
         "scripts/common/vagrant.sh",
         "scripts/common/vmtools.sh",
@@ -132,6 +135,7 @@
     "box_basename": "rhel-7.1",
     "build_timestamp": "{{isotime \"20060102150405\"}}",
     "git_revision": "__unknown_git_revision__",
+    "headless": "",
     "metadata": "floppy/dummy_metadata.json",
     "mirror": "http://put-your-mirror-here/",
     "name": "rhel-7.1",
