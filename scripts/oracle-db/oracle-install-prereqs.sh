@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 mkdir -p /apps
 chown -R oracle:oinstall /apps
@@ -27,5 +27,5 @@ echo "inst_group=oinstall" >> /etc/oraInst.loc
 chown oracle:oinstall /etc/oraInst.loc
 chmod 664 /etc/oraInst.loc
 
-chown -R oracle:oinstall /home/oracle/oracle-db
-chmod -R 774 /home/oracle/oracle-db
+#chown -R oracle:oinstall /home/oracle/oracle-db
+#chmod -R 774 /home/oracle/oracle-db

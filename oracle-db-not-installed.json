@@ -13,7 +13,7 @@
       "iso_checksum": "1ec844c1090a417b741a9bf0d6dea240",
       "iso_checksum_type": "md5",
       "iso_url": "{{user `iso_directory`}}/OracleLinux-R5-U8-Server-x86_64-dvd.iso",
-      "output_directory": "tropics-db",
+      "output_directory": "oracle-db-not-installed",
       "shutdown_command": "echo 'oracle'|sudo -S /sbin/halt -h -p",
       "ssh_password": "oracle",
       "ssh_port": 22,
@@ -41,7 +41,7 @@
         ]
       ],
       "virtualbox_version_file": ".vbox_version",
-      "vm_name": "tropics-db"
+      "vm_name": "oracle-db"
     }
   ],
   "post-processors": [
@@ -49,16 +49,11 @@
       "output": "builds/{{user `box_basename`}}.{{.Provider}}.box",
       "type": "vagrant"
     }
-  ],
-  "provisioners": [
+    ],
+    "provisioners": [
     {
       "destination": "/tmp/bento-metadata.json",
       "source": "{{user `metadata`}}",
-      "type": "file"
-    },
-	{
-      "destination": "/home/oracle",
-      "source": "{{user `software_directory`}}",
       "type": "file"
     },
     {
@@ -68,21 +63,16 @@
         "scripts/common/metadata.sh",
         "scripts/common/vagrant.sh",
         "scripts/common/sshd.sh",
-        "scripts/tropics-db/vmtools.sh",
-		"scripts/tropics-db/oracle-install-prereqs.sh"
+        "scripts/oracle-db/vmtools.sh",
+		"scripts/oracle-db/oracle-install-prereqs.sh"
 	  ],
       "type": "shell"
-    },
-	{
-	  "script": "scripts/tropics-db/oracle-software-install.sh",
-	  "type": "shell"
     },
 	{
 	  "environment_vars": [],
       "execute_command": "echo 'oracle' | {{.Vars}} sudo -S -E sh '{{.Path}}'",
       "scripts": [
-        "scripts/tropics-db/oracle-root.sh",
-		"scripts/tropics-db/cleanup.sh",
+    	"scripts/oracle-db/cleanup.sh",
         "scripts/common/minimize.sh"
       ],
       "type": "shell"
@@ -90,15 +80,15 @@
   ],
   "variables": {
     "arch": "64",
-    "box_basename": "tropics-db",
+    "box_basename": "oracle-db-not-installed",
     "build_timestamp": "{{isotime \"20060102150405\"}}",
     "git_revision": "__unknown_git_revision__",
     "metadata": "floppy/dummy_metadata.json",
     "mirror": "http://mirrors.dotsrc.org/oracle-linux/EL5/U8/x86_64",
 	"iso_directory": "iso",
 	"software_directory": "software/oracle-db",
-    "name": "tropics-db",
-    "template": "tropics-db",
+    "name": "oracle-db-not-installed",
+    "template": "oracle-db-not-installed",
     "version": "2.0.TIMESTAMP"
   }
 }
