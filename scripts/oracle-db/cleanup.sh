@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 #Clean up after Oracle DB install
 rm -rf /home/oracle/oracle-db

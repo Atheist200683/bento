@@ -61,6 +61,11 @@
       "source": "{{user `software_directory`}}",
       "type": "file"
     },
+	{
+      "destination": "/home/oracle",
+      "source": "{{user `resource_directory`}}",
+      "type": "file"
+    },
     {
 	  "environment_vars": [],
       "execute_command": "echo 'oracle' | {{.Vars}} sudo -S -E sh '{{.Path}}'",
@@ -69,20 +74,19 @@
         "scripts/common/vagrant.sh",
         "scripts/common/sshd.sh",
         "scripts/oracle-db/vmtools.sh",
-		"scripts/oracle-db/oracle-install-prereqs.sh"
+		"scripts/oracle-db/prereqs.sh"
 	  ],
       "type": "shell"
     },
 	{
-	  "script": "scripts/oracle-db/oracle-software-install.sh",
+	  "script": "scripts/oracle-db/install-oracle-vagrant-db.sh",
 	  "type": "shell"
     },
 	{
 	  "environment_vars": [],
       "execute_command": "echo 'oracle' | {{.Vars}} sudo -S -E sh '{{.Path}}'",
       "scripts": [
-        "scripts/oracle-db/oracle-root.sh",
-		"scripts/oracle-db/cleanup.sh",
+        "scripts/oracle-db/cleanup.sh",
         "scripts/common/minimize.sh"
       ],
       "type": "shell"
@@ -97,6 +101,7 @@
     "mirror": "http://mirrors.dotsrc.org/oracle-linux/EL5/U8/x86_64",
 	"iso_directory": "iso",
 	"software_directory": "software/oracle-db",
+	"resource_directory": "resources/oracle-db",
     "name": "oracle-db",
     "template": "oracle-db",
     "version": "2.0.TIMESTAMP"
