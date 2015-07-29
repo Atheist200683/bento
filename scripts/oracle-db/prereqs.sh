@@ -29,5 +29,5 @@ chmod 664 /etc/oraInst.loc
 touch /etc/oratab
 chmod 664 /etc/oratab
 
-chown -R oracle:oinstall /home/oracle/oracle-db
-chmod -R 774 /home/oracle/oracle-db
+chown -R oracle:oinstall /home/oracle
+chmod -R 700 /home/oracle
