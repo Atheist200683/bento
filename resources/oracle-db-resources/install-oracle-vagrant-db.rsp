@@ -103,7 +103,7 @@ ORACLE_BASE=/apps/oracle
 #   - SEONE  : Standard Edition One
 #   - PE     : Personal Edition (WINDOWS ONLY)
 #-------------------------------------------------------------------------------
-oracle.install.db.InstallEdition=SEONE
+oracle.install.db.InstallEdition=SE
 
 #-------------------------------------------------------------------------------
 # This variable is used to enable or disable custom install and is considered
@@ -340,7 +340,7 @@ oracle.install.db.config.starterdb.storageType=FILE_SYSTEM_STORAGE
 #
 # Applicable only when oracle.install.db.config.starterdb.storage=FILE_SYSTEM_STORAGE 
 #-------------------------------------------------------------------------------
-oracle.install.db.config.starterdb.fileSystemStorage.dataLocation=/apps/oracle/oradata
+oracle.install.db.config.starterdb.fileSystemStorage.dataLocation=/apps/oradata
 
 #-------------------------------------------------------------------------------
 # Specify the backup and recovery location.

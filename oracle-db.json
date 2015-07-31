@@ -2,7 +2,7 @@
   "builders": [
     {
       "boot_command": [
-        "<tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/oracle-5.8/ks.cfg<enter><wait>"
+        "<tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/oracle-db/ks.cfg<enter><wait>"
       ],
       "boot_wait": "10s",
       "disk_size": 40960,
@@ -46,7 +46,7 @@
   ],
   "post-processors": [
     {
-      "output": "builds/{{user `box_basename`}}.{{.Provider}}.box",
+      "output": "builds/{{user `box_basename`}}.box",
       "type": "vagrant"
     }
   ],
@@ -79,7 +79,7 @@
       "type": "shell"
     },
 	{
-	  "script": "scripts/oracle-db/install-oracle-vagrant-db.sh",
+	  "script": "scripts/oracle-db/install-oracle-db.sh",
 	  "type": "shell"
     },
 	{
@@ -100,8 +100,8 @@
     "metadata": "floppy/dummy_metadata.json",
     "mirror": "http://mirrors.dotsrc.org/oracle-linux/EL5/U8/x86_64",
 	"iso_directory": "iso",
-	"software_directory": "software/oracle-db",
-	"resource_directory": "resources/oracle-db",
+	"software_directory": "software/oracle-db-software",
+	"resource_directory": "resources/oracle-db-resources",
     "name": "oracle-db",
     "template": "oracle-db",
     "version": "2.0.TIMESTAMP"

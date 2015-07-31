@@ -1,8 +1,10 @@
-#!/bin/bash -x
+#!/bin/bash
 
 #Clean up oracle software directories
 rm -rf /home/oracle/oracle-db-*
 rm -rf /apps/oraInventory
+rm -rf /apps/oracle/cfgtoollogs
+
 
 #Shut down oracle database and listener
 su - oracle -c "sqlplus / as sysdba <<EOF 
@@ -22,3 +24,5 @@ for ndev in $(ls /etc/sysconfig/network-scripts/ifcfg-*); do
     sed -i '/^UUID/d' ${ndev}
   fi
 done
+
+exit $?

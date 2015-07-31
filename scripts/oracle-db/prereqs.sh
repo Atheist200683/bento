@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 mkdir -p /apps
 chown -R oracle:oinstall /apps
@@ -31,3 +31,5 @@ chmod 664 /etc/oratab
 
 chown -R oracle:oinstall /home/oracle
 chmod -R 700 /home/oracle
+
+exit $?
